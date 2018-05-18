@@ -1,0 +1,51 @@
+apply plugin: 'groovy'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+
+dependencies {
+    compileOnly gradleApi()//gradle sdk
+    compileOnly localGroovy()//groovy sdk
+    compileOnly "com.android.tools.build:gradle:3.0.1"
+//    compileOnly 'org.javassist:javassist:3.21.0-GA'
+
+    implementation "com.github.drumge:easy-plugin-api:${easy_plugin_api_version}"
+//    implementation project(":annotation-api")
+}
+
+compileJava {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+if (open_publish == 'true') {
+    apply from: '../publish/gradle-mvn-push.gradle'
+
+    publish_maven_pom = [
+            version       : "${easy_plugin_publish_version}",
+            groupId       : "com.github.drumge",
+            artifactId    : "${project.getName()}",
+            artifact      : "$buildDir/libs/${project.getName()}-${easy_plugin_publish_version}.jar",
+
+            name          : "drumge",
+            packaging     : "jar",
+            description   : "drumge's maven",
+
+            github_url    : "https://github.com/drumge/easy-gradle-plugin",
+            github_project: "drumge/easy-gradle-plugin"
+
+    ]
+}
+
+/*
+
+http://blog.csdn.net/qiujuer/article/details/44195131
+
+http://www.trinea.cn/dev-tools/upload-java-jar-or-android-aar-to-maven-center-repository/
+
+<server>
+  <id>${server}</id>
+  <username>Mzr5nJSS</username>
+  <password>n0HFEqvZUSGmsRPy06tYs0X3vgrsr9rFcnwj8iARtjCC</password>
+</server>
+
+ */
