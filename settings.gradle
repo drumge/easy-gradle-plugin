@@ -1,11 +1,4 @@
 include ':easy-plugin-api'
 include ':easy-plugin'
 
-include ':kvo-annotation'
-include ':kvo-api'
-include ':kvo-compiler'
-include ':kvo'
-include ':kvo-example'
-
-include ':rlog'
 include ':app'
