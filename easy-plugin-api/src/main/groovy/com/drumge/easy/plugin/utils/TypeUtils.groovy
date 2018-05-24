@@ -1,4 +1,4 @@
-package com.drumge.easy.plugin.api
+package com.drumge.easy.plugin.utils
 
 import com.android.annotations.NonNull
 import com.android.annotations.Nullable

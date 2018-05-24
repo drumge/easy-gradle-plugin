@@ -116,7 +116,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         doBeforeJar()
         inputs.each { TransformInput input ->
             input.jarInputs.each { JarInput jarInput ->
-                println("jarInput " + jarInput)
+//                println("jarInput " + jarInput)
                 File output = outputProvider.getContentLocation(jarInput.name,
                         jarInput.contentTypes, jarInput.scopes,
                         Format.JAR)
@@ -138,7 +138,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         doBeforeDirectory()
         inputs.each { TransformInput input ->
             input.directoryInputs.each { DirectoryInput directoryInput ->
-                println("directoryInput " + directoryInput)
+//                println("directoryInput " + directoryInput)
                 File output = outputProvider.getContentLocation(directoryInput.name,
                         directoryInput.contentTypes, directoryInput.scopes,
                         Format.DIRECTORY)

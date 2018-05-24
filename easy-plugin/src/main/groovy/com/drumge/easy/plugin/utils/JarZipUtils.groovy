@@ -22,7 +22,7 @@ class JarZipUtils {
         return true
     }
 
-    def static boolean isZipEmpty(String zipFilePath) {
+    static boolean isZipEmpty(String zipFilePath) {
         ZipFile z
         try {
             z = new ZipFile(zipFilePath)
