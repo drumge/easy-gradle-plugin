@@ -28,197 +28,30 @@ dependencies {
 //    androidTestImplementation 'com.android.support.test:runner:1.0.1'
 //    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
 
-//    implementation("com.github.drumge:rlog:${rlog_version}")
     implementation "com.github.drumge:kvo-api:${kvo_api_version}"
     implementation "com.github.drumge:kvo-annotation:${kvo_annotation_version}"
 
     annotationProcessor "com.github.drumge:kvo-compiler:${kvo_compiler_version}"
-
-    implementation project(':kvo-example')
 }
-
-configurations.all {
-
-// check for updates every build
-    resolutionStrategy.cacheChangingModulesFor  0,'seconds'
-
-}
-
-
-task t {
-    doLast(){
-        println()
-        project.logger.info("ssss", "ddddddddd")
-        println()
-    }
-}
-
-//apply from: '../test.gradle'
 
 ///*
-import com.drumge.kvo.KvoPlugin
-import com.drumge.kvo.KvoTransform
+import com.drumge.kvo.plugin.KvoPlugin
+import com.drumge.kvo.plugin.KvoTransform
 
 apply plugin: 'com.drumge.easy.plugin'
-
 
 easy_plugin {
     enable = true
 
     plugins{
-//        rlog {
-//            transform = new LogTransform(project)
-//            extend = LogExtend.createLogExtend(project) { LogExtend log ->
-//                log.enable = true
-//            }
-//        }
-
         kvo {
             plugin = new KvoPlugin(project)
             transform = new KvoTransform(project)
         }
     }
-
 }
 //*/
 
-/*
-transform {
-    enable(true)
-
-//    addExtend(LogExtend.LOG_EXTEND_TAG, new LogExtend(project) {
-//        {
-//            logEnable(true)
-//
-//            // 配置所有的子module的目标Log
-//            rootProject.subprojects.each { Project subProject ->
-//                addLogLib(groupId: rootProject.name, name: subProject.name) {
-//                    [
-//                            enable: true, // 单个目标Log的开关，false--不会解压该jar包
-//                            package: "com.yy.base.logger", // 目标Log包名
-//                            className: "MLog", // 目标Log类名
-//                            method: [ // 目标Log方法名对应的日志等级
-//                                      verbose: LogLevel.VERBOSE,
-//                                      debug: LogLevel.DEBUG,
-//                                      info: LogLevel.INFO,
-//                                      warn: LogLevel.WARM,
-//                                      error: LogLevel.ERROR
-//                            ],
-//                            // 初始化当前日志等级
-//                            level: LogLevel.OPEN
-//                    ]
-//                }
-//            }
-//        }
-//    })
-
-    addExtend(LogExtend.LOG_EXTEND_TAG, new LogExtend(project)) {
-        logEnable(true)
-//        enable = false
-
-        // 配置所有的子module的目标Log
-        rootProject.subprojects.each { Project subProject ->
-            addLogLib(groupId: rootProject.name, name: subProject.name) {
-                [
-                        enable: true, // 单个目标Log的开关，false--不会解压该jar包
-                        package: "com.yy.base.logger", // 目标Log包名
-                        className: "MLog", // 目标Log类名
-                        method: [ // 目标Log方法名对应的日志等级
-                                  verbose: LogLevel.VERBOSE,
-                                  debug: LogLevel.DEBUG,
-                                  info: LogLevel.INFO,
-                                  warn: LogLevel.WARM,
-                                  error: LogLevel.ERROR
-                        ],
-                        // 初始化当前日志等级
-                        level: LogLevel.OPEN
-                ]
-            }
-        }
-    }
-
-    addTransformImp(LogExtend.LOG_EXTEND_TAG, new LogTransform(project))
-}
-
-*/
-
-beforeEvaluate {
-//    dependencies.add('implementation', 'project \':kvo-example\'')
-//    dependencies.module('kvo-example')
-//    dependencies.add('implementation', "com.github.drumge:kvo-annotation:${kvo_annotation_version}")
-//    configurations.implementation.dependencies.all {
-//        println(it)
-//    }
-}
-
-
-afterEvaluate {
-    println()
-//    println(compileDebugJavaWithJavac.properties)
-//    dependencies.add('implementation', project(':kvo-example'))
-//    dependencies.module(':kvo-example')
-//    dependencies.add('implementation', "com.github.drumge:kvo-annotation:${kvo_annotation_version}")
-
-//    println(configurations.implementation.dependencies)
-//    configurations.implementation.dependencies.all {
-//        println(it)
-//    }
-//    println()
-//    println(configurations.annotationProcessor.dependencies)
-//    configurations.annotationProcessor.dependencies.all {
-//        println(it)
-//    }
-//    println('------------------------')
-//    println()
-
-//
-//    tasks.findAll {
-//        return it.name.endsWith('JavaWithJavac')
-//    }.each { javac ->
-//        javac.classpath += project.files(javac.annotationProcessorOutputFolder)
-//        println('==================' + javac.classpath)
-//        javac.classpath.each {
-//            println('------------ ' + it)
-//        }
-//
-//    }
-}
-
-//def modules = getSubprojects()//
-//def modules = getAllprojects()
-//def filter = [libraryA, libraryB]// app 是主工程模块名
-//project(: app) { p ->
-//    p.afterEvaluate {
-//        modules.each() { module ->
-//            if (!filter.contains(module.name)) {
-//                if (module != rootProject && module.parent == rootProject) {
-//                    println p.name + "添加的依赖模块:" + module.name p.
-//                    dependencies.add("compile", project(: +module.name))
-//                }
-//            }
-//        }
-//    }
-//}
-
-private static void addFile2Zip(ZipOutputStream zos, String path, File file) throws IOException {
-//    ZipInputStream zin = new ZipInputStream(new FileInputStream(tmpFile))
-//    ZipOutputStream zout = new ZipOutputStream(new FileOutputStream(zipFile))
-    if (!file.canRead()) {
-        System.out.println("Cannot read " + file.getCanonicalPath() + " (maybe because of permissions)")
-        return
-    }
-    zos.putNextEntry(new ZipEntry(path))
-    FileInputStream fis = new FileInputStream(file)
-    byte[] buffer = new byte[4092]
-    int byteCount
-    while ((byteCount = fis.read(buffer)) != -1) {
-        zos.write(buffer, 0, byteCount)
-    }
-
-    fis.close()
-    zos.flush()
-    zos.closeEntry()
-}
 
 
 

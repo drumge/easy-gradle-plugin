@@ -1,7 +1,5 @@
 package com.drumge.easy.plugin;
 
-import android.animation.AnimatorSet;
-import android.animation.TimeInterpolator;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
@@ -34,19 +32,5 @@ public class MainActivity extends Activity {
     @KvoWatch(name = K_GameInfo.bgUrl, tag = "game1")
     public void onUpdateGameId(KvoEvent<GameInfo, String> event) {
 
-//        AnimatorSet animatorSet;
-//        animatorSet.setInterpolator(new TimeInterpolator() {
-//            @Override
-//            public float getInterpolation(float input) {
-//                return 0;
-//            }
-//        });
-//        Math.sqrt()
-
     }
-
-//    @KvoWatch(name = K_ExampleSource.index)
-//    public void onUpdateIndex(KvoEvent<ExampleSource, Integer> event) {
-//
-//    }
 }
