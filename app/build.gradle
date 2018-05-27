@@ -1,5 +1,8 @@
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
+import com.drumge.kvo.plugin.KvoPlugin
+import com.drumge.kvo.plugin.KvoTransform
+import com.drumge.plugin.example.ExampleExtend
+import com.drumge.plugin.example.ExamplePlugin
+import com.drumge.plugin.example.ExampleTransform
 
 apply plugin: 'com.android.application'
 
@@ -34,13 +37,6 @@ dependencies {
 }
 
 ///*
-import com.drumge.kvo.plugin.KvoPlugin
-import com.drumge.kvo.plugin.KvoTransform
-
-import com.drumge.plugin.example.ExamplePlugin
-import com.drumge.plugin.example.ExampleExtend
-import com.drumge.plugin.example.ExampleTransform
-
 apply plugin: 'com.drumge.easy.plugin'
 
 easy_plugin {

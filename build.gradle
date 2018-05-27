@@ -18,6 +18,9 @@ buildscript {
 
         classpath "com.github.drumge:easy-plugin:${easy_plugin_version}"
         classpath "com.github.drumge:kvo-plugin:${kvo_plugin_version}"
+
+        classpath fileTree(dir: 'plugin_libs', include: ['*.jar'])
+
     }
 }
 

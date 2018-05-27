@@ -1,4 +1,6 @@
 include ':easy-plugin-api'
 include ':easy-plugin'
 
+include ':plugin-example'
+
 include ':app'

@@ -1,0 +1,26 @@
+
+
+task buildPlugin(type: Copy) {
+    group = 'easyplugin'
+    description = 'build easy plugin'
+
+    from "${project.buildDir.absolutePath}/libs/${project.name}-${version}.jar"
+    into "${rootDir.absolutePath}/plugin_libs"
+
+}
+
+task cleanPlugin(type: Delete) {
+    group = 'easyplugin'
+    description = 'clean easy plugin'
+
+    delete project.buildDir
+    doLast {
+        project.fileTree("${rootDir.absolutePath}/plugin_libs").filter {
+            return it.name.startsWith(project.name)
+        }.each {
+            project.delete(it)
+        }
+    }
+}
+
+buildPlugin.dependsOn jar
