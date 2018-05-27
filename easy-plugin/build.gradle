@@ -20,20 +20,7 @@ compileJava {
 if (open_publish == 'true') {
     apply from: '../publish/gradle-mvn-push.gradle'
 
-    publish_maven_pom = [
-            version       : "${easy_plugin_publish_version}",
-            groupId       : "com.github.drumge",
-            artifactId    : "${project.getName()}",
-            artifact      : "$buildDir/libs/${project.getName()}-${easy_plugin_publish_version}.jar",
-
-            name          : "drumge",
-            packaging     : "jar",
-            description   : "drumge's maven",
-
-            github_url    : "https://github.com/drumge/easy-gradle-plugin",
-            github_project: "drumge/easy-gradle-plugin"
-
-    ]
+    setPublishVersion(easy_plugin_publish_version)
 }
 
 /*
