@@ -16,6 +16,7 @@ class BaseEasyTransform implements IEasyTransform {
     protected IEasyTransformSupport support
 
     protected ClassPool pool = new ClassPool(true)
+    private final List<String> classPaths = new ArrayList<>()
     private final List<ClassPath> classPathList = new ArrayList<>()
 
     BaseEasyTransform(@NonNull Project project){
@@ -134,6 +135,10 @@ class BaseEasyTransform implements IEasyTransform {
      * @param path
      */
     protected final void appendClassPath(String path){
+        if (path == null || path.length() == 0 || classPaths.contains(path)) {
+            return
+        }
+        classPaths.add(path)
         ClassPath cp = pool.appendClassPath(path)
         classPathList.add(cp)
     }
@@ -147,6 +152,7 @@ class BaseEasyTransform implements IEasyTransform {
         }
         pool.clearImportedPackages()
         classPathList.clear()
+        classPaths.clear()
     }
 
     protected final void appendDirClass(List<String> inputs){
