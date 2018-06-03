@@ -47,12 +47,12 @@ easy_plugin {
     enable = true
 
     plugins{
-        kvo {
+        kvo { // 使用了 easy-gradle-plugin 的实践项目，详情可跳转 https://github.com/drumge/kvo.git 了解
             plugin = new KvoPlugin(project)
             transform = new KvoTransform(project)
         }
 
-        example {
+        example { // 使用 groovy 语言实现的插件，详细使用 plugin-example module
             plugin = new ExamplePlugin(project)
             extend = ExampleExtend.createExtend(project) { ExampleExtend extend ->
                 extend.enable = true
@@ -71,7 +71,7 @@ easy_plugin {
             transform = new ExampleTransform(project)
         }
 
-        java_example {
+        java_example { // 使用 Java 语言实现的插件，详细使用 java-plugin-example module
             plugin = new JavaPlugin(project)
             extend = JavaExtend.createExtend(project) { JavaExtend extend ->
                 extend.enable = true
