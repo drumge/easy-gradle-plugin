@@ -150,11 +150,11 @@ easy_plugin {
 easy_plugin {
     plugins {
         exmple { // 名字可自定义
-            // 以下的 plugin， extend， ransform 名字不能改，并且分别对应着指定的类型， 这些参数的接口类定义在 easy-plugin-api 中。plugin -> IPlugin， extend -> IExtend, transform -> IEasyTransform
+            // 以下的 plugin， extend， transform 名字不能改，并且分别对应着指定的类型， 这些参数的接口类定义在 easy-plugin-api 中。plugin -> IPlugin， extend -> IExtend, transform -> IEasyTransform
             // plugin， extend， ransform 三者并不是必须的，可以只实现其中的任何一个
             plugin = new ExamplePlugin(project) // class ExamplePlugin implements IPlugin
             extend = new ExampleExtend() // class ExampleExtend implements IExtend
-            ransform = new ExampleTransform(project) // class ExampleTransform extends BaseEasyTransform
+            transform = new ExampleTransform(project) // class ExampleTransform extends BaseEasyTransform
         }
     }
 }
