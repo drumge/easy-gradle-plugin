@@ -1,8 +1,9 @@
 # easy-gradle-plugin
 
+* github 项目地址 [https://github.com/drumge/easy-gradle-plugin](https://github.com/drumge/easy-gradle-plugin)
 * 这是一款让你更容易使用 android gradle 自定义插件的插件。可以帮助开发者省去了解 gradle 脚本，groovy 学习成本，只关注需求的实现逻辑，完全可以使用 Java 语言来实现自己的 gradle 插件。
 
-* 使用 easy-gradle-plugin 可以很方便的自定义 transform 不用关心任何发布等相关繁琐的操作，执行继承 BaseEasyTransform 类并配置插件 transform = new ExampleTransform(project)  即可。
+* 使用 easy-gradle-plugin 可以很方便的自定义 transform 不用关心任何发布等相关繁琐的操作，直接继承 BaseEasyTransform 类并配置插件 transform = new ExampleTransform(project)  即可。
 
 * 当项目中有多个自定义的 gradle 插件时，每个插件自定义的 transform 操作 jar 库，可能存在每个 transform 都会解压 jar 包并压缩 jar 包等，这些操作是很耗时的，有多个插件时，编译速度变慢是硬伤。使用 easy-gradle-plugin 可以配置多个插件，每个插件可以对应一个 transform， 但是不需要多次解压、压缩的过程，只会有一次。
 
@@ -10,7 +11,7 @@
 
 * 大部分情况下 android 应用开发者并不需要了解 gradle 的使用及原理，平时使用最多的可能就是 dependencies 添加一个依赖库了。如果需要对项目做 AOP 切面编程或者一些特殊的需求，可能就需要使用到 gradle 自定义插件了。例如比较受开发者深受喜欢的EventBus, Butterknife 都使用了自定义 gradle 插件来在编译期间生成一些辅助的类以及插入代码实现相关的功能，可以避免在运行期间使用反射。一般来说框架中使用了反射都可以考虑使用 AOP 思想来在编译期间生成代码来避免反射来实现相同的功能，并且使用更加便捷。
 
-## 使用
+## gradle 配置
 
 * 在 android 项目根目录的 build.gralde 中配置
 ```groovy
@@ -44,7 +45,7 @@ easy_plugin {
 ```
 以上就是所有使用 easy-gradle-plugin 的全部配置。实现自己的插件之后，并配置以上的两个地方就可以愉快的使用自定义 gradle 插件了。
 
-## 示例
+## 示例演示说明
 
 * 创建本地插件
  1. 在项目中创建一个 Java Library 类型 module，可参考 plugin-example 和 java-plugin-example。  
@@ -141,7 +142,7 @@ easy_plugin {
     }
  ```
 
-## 接口
+## 接口说明
 
 * 接口的使用可以参考 example-plugin 和 java-example-plugin, 或者 [kvo库](https://github.com/drumge/kvo.git)  
 
@@ -150,12 +151,16 @@ easy_plugin {
 easy_plugin {
     plugins {
         exmple { // 名字可自定义
-            // 以下的 plugin， extend， ransform 名字不能改，并且分别对应着指定的类型， 这些参数的接口类定义在 easy-plugin-api 中。plugin -> IPlugin， extend -> IExtend, transform -> IEasyTransform
+            // 以下的 plugin， extend， transform 名字不能改，并且分别对应着指定的类型， 这些参数的接口类定义在 easy-plugin-api 中。plugin -> IPlugin， extend -> IExtend, transform -> IEasyTransform
             // plugin， extend， ransform 三者并不是必须的，可以只实现其中的任何一个
             plugin = new ExamplePlugin(project) // class ExamplePlugin implements IPlugin
             extend = new ExampleExtend() // class ExampleExtend implements IExtend
-            ransform = new ExampleTransform(project) // class ExampleTransform extends BaseEasyTransform
+            transform = new ExampleTransform(project) // class ExampleTransform extends BaseEasyTransform
         }
     }
 }
 ```
+
+## 实战项目
+* Android KVO 参考了 iOS 中的思想使用在 Android 系统上实现一套属性改变自动通知的框架，结合预编译手段实现了简单使用注解就可以很方便的使用 KVO。
+github 项目地址 [https://github.com/drumge/kvo](https://github.com/drumge/kvo)
