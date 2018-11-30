@@ -3,20 +3,19 @@ package com.drumge.easy.plugin
 import com.android.annotations.NonNull
 import com.android.annotations.Nullable
 import com.android.build.api.transform.*
-import com.android.build.gradle.internal.pipeline.TransformManager
 import com.drumge.easy.plugin.api.IEasyPluginContainer
 import com.drumge.easy.plugin.api.IEasyTransform
 import com.drumge.easy.plugin.api.IEasyTransformSupport
 import com.drumge.easy.plugin.extend.EasyExtend
 import com.drumge.easy.plugin.extend.EasyPluginContainer
 import com.drumge.easy.plugin.utils.JarZipUtils
-import com.google.common.collect.Sets
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Project
 
 class EasyTransform extends Transform implements IEasyTransformSupport {
 
     private final Project project
+    private EasyPluginContainer extend
     private String tmpDir
     private boolean isEnable = true
     private final List<IEasyTransform> transformList = new ArrayList<>()
@@ -26,11 +25,11 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
 
     EasyTransform(Project project){
         this.project = project
-
+        extend = project[IEasyPluginContainer.EASY_PLUGIN_TAG]
         tmpDir = "${project.buildDir.absolutePath}${File.separator}tmp${File.separator}easy-transform"
         if (project.hasProperty(IEasyPluginContainer.EASY_PLUGIN_TAG)) {
             project.afterEvaluate {
-                EasyPluginContainer extend = project[IEasyPluginContainer.EASY_PLUGIN_TAG]
+                extend = project[IEasyPluginContainer.EASY_PLUGIN_TAG]
                 isEnable = extend.enable && extend.plugins != null
                 if (!isEnable) {
                     return
@@ -53,12 +52,15 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
 
     @Override
     Set<QualifiedContent.ContentType> getInputTypes() {
-        return Sets.immutableEnumSet(QualifiedContent.DefaultContentType.CLASSES)
+//        return Sets.immutableEnumSet(QualifiedContent.DefaultContentType.CLASSES)
+        return extend.inputTypes
     }
 
     @Override
     Set<? super QualifiedContent.Scope> getScopes() {
-        return TransformManager.SCOPE_FULL_PROJECT
+//        return TransformManager.SCOPE_FULL_PROJECT
+        return extend.scopes
+        // Transforms with scopes '[SUB_PROJECTS, EXTERNAL_LIBRARIES]' cannot be applied to library projects.
 //        return Sets.immutableEnumSet(QualifiedContent.Scope.PROJECT)
 //        return Sets.immutableEnumSet(
 //                QualifiedContent.Scope.PROJECT,
@@ -116,7 +118,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         doBeforeJar()
         inputs.each { TransformInput input ->
             input.jarInputs.each { JarInput jarInput ->
-//                println("jarInput " + jarInput)
+                println("jarInput " + jarInput)
                 File output = outputProvider.getContentLocation(jarInput.name,
                         jarInput.contentTypes, jarInput.scopes,
                         Format.JAR)
@@ -138,7 +140,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         doBeforeDirectory()
         inputs.each { TransformInput input ->
             input.directoryInputs.each { DirectoryInput directoryInput ->
-//                println("directoryInput " + directoryInput)
+                println("directoryInput " + directoryInput)
                 File output = outputProvider.getContentLocation(directoryInput.name,
                         directoryInput.contentTypes, directoryInput.scopes,
                         Format.DIRECTORY)
@@ -258,6 +260,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
      * @param outputs 输出目标文件
      */
     private void doEachDirectoryOutput(DirectoryInput directoryInput, File outputs){
+        println("doEachDirectoryOutput " + directoryInput + ' , outputs ' + outputs + ' , transformList ' + transformList)
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onEachDirectoryOutput(directoryInput, outputs)
         }

@@ -1,6 +1,7 @@
 package com.drumge.easy.plugin
 
 import com.android.build.gradle.AppPlugin
+import com.android.build.gradle.LibraryPlugin
 import com.drumge.easy.plugin.api.IEasyPluginContainer
 import com.drumge.easy.plugin.extend.EasyPluginContainer
 import org.gradle.api.Plugin
@@ -18,7 +19,9 @@ class EasyPlugin implements Plugin<Project> {
         createExtend(project)
 
         def isApplication = project.plugins.hasPlugin(AppPlugin)
-        if(isApplication){
+        def isAndroidLibrary = project.plugins.hasPlugin(LibraryPlugin)
+
+        if(isApplication || isAndroidLibrary){
             project.android.registerTransform(new EasyTransform(project))
         }
     }

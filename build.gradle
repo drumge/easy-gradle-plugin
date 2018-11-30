@@ -11,7 +11,7 @@ buildscript {
         maven{ url uri('https://oss.sonatype.org/content/groups/staging')} // 每次会拉取最新的SNAPSHOT版本
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.2'
+        classpath 'com.android.tools.build:gradle:3.2.1'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
