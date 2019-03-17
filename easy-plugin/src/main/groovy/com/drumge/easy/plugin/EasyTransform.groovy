@@ -16,7 +16,6 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
 
     private final Project project
     private EasyPluginContainer extend
-    private String tmpDir
     private boolean isEnable = true
     private final List<IEasyTransform> transformList = new ArrayList<>()
     private final Map<String, String> allUnzipJars = new HashMap<>()
@@ -26,7 +25,6 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     EasyTransform(Project project){
         this.project = project
         extend = project[IEasyPluginContainer.EASY_PLUGIN_TAG]
-        tmpDir = "${project.buildDir.absolutePath}${File.separator}tmp${File.separator}easy-transform"
         if (project.hasProperty(IEasyPluginContainer.EASY_PLUGIN_TAG)) {
             project.afterEvaluate {
                 extend = project[IEasyPluginContainer.EASY_PLUGIN_TAG]
@@ -116,6 +114,8 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         doBeforeTransform(context, outputProvider, isIncremental)
 
         doBeforeJar()
+        String tmpDirPath = context.temporaryDir.absolutePath
+        println("context " + context.variantName + " , " + context.temporaryDir + " , " + context.path)
         inputs.each { TransformInput input ->
             input.jarInputs.each { JarInput jarInput ->
                 println("jarInput " + jarInput)
@@ -123,7 +123,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
                         jarInput.contentTypes, jarInput.scopes,
                         Format.JAR)
                 if (isNeedUnzipJar(jarInput, output)) { // 需要解压 jar
-                    String tmpPath = "${tmpDir}${File.separator}${jarInput.name.replace(':', '')}${File.separator}"
+                    String tmpPath = "${tmpDirPath}${File.separator}${jarInput.name.replace(':', '')}${File.separator}"
                     JarZipUtils.unzipJar(jarInput.file.absolutePath, tmpPath)
                     allUnzipJars.put(tmpPath, output.absolutePath)
                     if (doUnzipJarFile(jarInput, tmpPath, output)) { // 需要压缩
@@ -160,8 +160,6 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
                 JarZipUtils.zipJar(tmp, out)
             }
         }
-        // todo JarZipUtils.zipJar 可能是异步的，不能立即删除
-//        FileUtils.deleteDirectory(new File(tmpDir))
     }
 
     private void setSupport(IEasyTransformSupport support) {

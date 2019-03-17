@@ -6,6 +6,7 @@ task buildPlugin(type: Copy) {
 
     from "${project.buildDir.absolutePath}/libs/${project.name}-${version}.jar"
     into "${rootDir.absolutePath}/plugin_libs"
+    rename("${version}.jar", "lib.jar")
 
 }
 

@@ -3,7 +3,6 @@ package com.drumge.easy.plugin;
 
 import com.drumge.kvo.annotation.KvoBind;
 import com.drumge.kvo.annotation.KvoIgnore;
-import com.drumge.kvo.annotation.KvoName;
 import com.drumge.kvo.annotation.KvoSource;
 
 import java.util.List;
@@ -26,7 +25,6 @@ public class UserInfo {
     @KvoIgnore
     public String header;
 
-    @KvoName(name = "description")
     private String dec;
 
     private GameInfo gameInfo;
