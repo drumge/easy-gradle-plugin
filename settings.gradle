@@ -1,5 +1,5 @@
-include ':easy-plugin-api'
-include ':easy-plugin'
+include ':plugin-api'
+include ':plugin'
 
 include ':plugin-example'
 include ':java-plugin-example'

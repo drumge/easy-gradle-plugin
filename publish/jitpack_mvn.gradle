@@ -1,0 +1,69 @@
+
+apply plugin: 'com.github.dcendents.android-maven'
+
+group = 'com.github.drumge'// jitpack group
+version = project.version
+//artifact = project.name
+
+configurations {
+    doclava
+}
+
+dependencies {
+    doclava 'com.google.doclava:doclava:1.0.6'
+}
+
+task androidJavadocs(type: Javadoc, dependsOn: project.configurations.doclava) {
+    failOnError true
+    title = null
+    source = sourceSets(project).main.java.source
+    classpath = getClassPath(project)
+    options {
+        doclet = "com.google.doclava.Doclava"
+        docletpath = configurations.doclava.files.asType(List)
+    }
+
+}
+
+task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    classifier = 'javadoc'
+
+    from androidJavadocs.destinationDir
+}
+
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+
+    from sourceSets(project).main.java.srcDirs
+}
+
+artifacts {
+    archives androidSourcesJar
+    archives androidJavadocsJar
+}
+
+
+private SourceSetContainer sourceSets(Project project) {
+    if (project.hasProperty("android")) {
+        return android.sourceSets
+    } else {
+        getJavaPlugin(project).sourceSets
+    }
+}
+
+private FileCollection getClassPath(Project project) {
+    FileCollection classpath = project.files()
+    if (project.hasProperty("android")) {
+        classpath += project.android.libraryVariants.toList().first().javaCompile.classpath
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+        return android.sourceSets
+    } else {
+        classpath += getJavaPlugin(project).sourceSets.main.compileClasspath
+        classpath += getJavaPlugin(project).sourceSets.main.runtimeClasspath
+    }
+    return classpath
+}
+
+private JavaPluginConvention getJavaPlugin(Project project) {
+    return ((JavaPluginConvention)project.getConvention().getPlugin(JavaPluginConvention.class))
+}
