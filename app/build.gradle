@@ -65,7 +65,7 @@ easy_plugin {
             transform = new KvoTransform(project)
         }
 
-        example { // 使用 groovy 语言实现的插件，详细使用 plugin-example module
+        example { // 使用 groovy 语言实现的插件，详细看 plugin-example module
             plugin = new ExamplePlugin(project)
             extend = ExampleExtend.createExtend(project) { ExampleExtend extend ->
                 extend.enable = true
@@ -84,7 +84,7 @@ easy_plugin {
             transform = new ExampleTransform(project)
         }
 
-        java_example { // 使用 Java 语言实现的插件，详细使用 java-plugin-example module
+        java_example { // 使用 Java 语言实现的插件，详细看 java-plugin-example module
             plugin = new JavaPlugin(project)
             extend = JavaExtend.createExtend(project) { JavaExtend extend ->
                 extend.enable = true
