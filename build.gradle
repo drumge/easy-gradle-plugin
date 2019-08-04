@@ -16,7 +16,7 @@ buildscript {
         // in the individual module build.gradle files
 
         // 添加 easy-gradle-plugin 插件, 主要是为了 apply plugin: 'com.drumge.easy.plugin'
-        classpath "com.github.drumge:plugin:${easy_plugin_version}"
+//        classpath "com.github.drumge:plugin:${easy_plugin_version}"
 
         // 以下两种添加 classpath 主要是为了在 build.gradle 中可以 import 相关的类
         // 使用了 easy-gradle-plugin 的实践项目，详情可跳转 https://github.com/drumge/kvo.git 了解
