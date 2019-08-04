@@ -8,8 +8,8 @@ dependencies {
     compileOnly "com.android.tools.build:gradle:3.0.1"
 //    compileOnly 'org.javassist:javassist:3.21.0-GA'
 
-//    implementation "com.github.drumge:plugin-api:${easy_plugin_api_version}"
-    implementation project(":plugin-api")
+    implementation "com.github.drumge.easy-gradle-plugin:plugin-api:${easy_plugin_api_version}"
+//    implementation project(":plugin-api")
 //    implementation project(":annotation-api")
 }
 
