@@ -22,5 +22,8 @@ if (open_publish == 'true') {
 
     setPublishVersion(easy_plugin_api_publish_version)
 }
-group='com.github.drumge'// jitpack group
+
+apply plugin: 'com.github.dcendents.android-maven'
+group = 'com.github.drumge'// jitpack group
+version = easy_plugin_api_publish_version
 

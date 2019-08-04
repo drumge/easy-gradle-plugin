@@ -1,6 +1,6 @@
 apply plugin: 'groovy'
-apply plugin: 'maven'
-apply plugin: 'maven-publish'
+//apply plugin: 'maven'
+//apply plugin: 'maven-publish'
 
 dependencies {
     compileOnly gradleApi()//gradle sdk
@@ -22,7 +22,10 @@ if (open_publish == 'true') {
 
     setPublishVersion(easy_plugin_publish_version)
 }
-group='com.github.drumge'// jitpack group
+
+apply plugin: 'com.github.dcendents.android-maven'
+group = 'com.github.drumge'// jitpack group
+version = easy_plugin_publish_version
 
 /*
 
