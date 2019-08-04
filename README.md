@@ -49,7 +49,7 @@ easy_plugin {
 
 * 创建本地插件
  1. 在项目中创建一个 Java Library 类型 module，可参考 plugin-example 和 java-plugin-example。  
- 2. 在创建 module 下的 build.gradle dependencies 中加入依赖 `` implementation "com.github.drumge:easy-plugin-api:0.2.3" ``。
+ 2. 在创建 module 下的 build.gradle dependencies 中加入依赖 `` implementation "com.github.drumge:easy-plugin-api:0.3.0" ``。
  3. 在 build.gradle 最后加入 ``apply from: "${rootDir.absolutePath}/build_scrip/plugin_build.gradle" `` 使用 plugin_build.gradle 脚本中自定义的 task， 包含 buildPlugin 和 cleanPlugin，分别编译本地插件和清除插件。
  4. 根据需要创建类，可分别实现 easy-plugin-api 中的接口类，或者继承抽象类并实现需要的接口。
  5. 执行 buildPlugin 生成插件 jar 并默认拷贝到 rootDir/plugin_libs 目录，生成目录可在 plugin_build.gradle 脚本中手动修改。
