@@ -38,7 +38,7 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:3.8.0'
 }
 
-///*
+/*
 apply plugin: 'com.drumge.easy.plugin'
 
 
@@ -104,7 +104,7 @@ easy_plugin {
         }
     }
 }
-//*/
+*/
 
 
 task t {
