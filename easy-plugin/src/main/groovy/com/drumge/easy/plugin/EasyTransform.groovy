@@ -3,6 +3,7 @@ package com.drumge.easy.plugin
 import com.android.annotations.NonNull
 import com.android.annotations.Nullable
 import com.android.build.api.transform.*
+import com.android.ide.common.internal.WaitableExecutor
 import com.drumge.easy.plugin.api.IEasyPluginContainer
 import com.drumge.easy.plugin.api.IEasyTransform
 import com.drumge.easy.plugin.api.IEasyTransformSupport
@@ -22,7 +23,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     // 暂存解压并被修改的 jar 文件，在最后在压缩
     private final Map<String, String> unzipJars = new HashMap<>()
 
-    EasyTransform(Project project){
+    EasyTransform(Project project) {
         this.project = project
         extend = project[IEasyPluginContainer.EASY_PLUGIN_TAG]
         if (project.hasProperty(IEasyPluginContainer.EASY_PLUGIN_TAG)) {
@@ -77,15 +78,15 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         if (!isEnable) {
             return
         }
-        try{
+        try {
             doTransform(transformInvocation)
-        } catch (Exception exception){
-            if(!onException(exception)){ // 不处理异常，则终止编译并输出异常堆栈
-                exception.printStackTrace()
-                throw new RuntimeException("some error happened when building, look up more detail ahead")
+        } catch (Exception exception) {
+            if (!onException(exception)) { // 不处理异常，则终止编译并输出异常堆栈
+//                exception.printStackTrace()
+                throw new RuntimeException("some error happened when building, look up more detail ahead", exception)
             }
             exception.printStackTrace()
-        } finally{
+        } finally {
             onFinally()
         }
     }
@@ -115,51 +116,71 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
 
         doBeforeJar()
         String tmpDirPath = context.temporaryDir.absolutePath
-        println("context " + context.variantName + " , " + context.temporaryDir + " , " + context.path)
+//        println("context " + context.variantName + " , " + context.temporaryDir + " , " + context.path)
+        WaitableExecutor waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
         inputs.each { TransformInput input ->
             input.jarInputs.each { JarInput jarInput ->
-                println("jarInput " + jarInput)
-                File output = outputProvider.getContentLocation(jarInput.name,
-                        jarInput.contentTypes, jarInput.scopes,
-                        Format.JAR)
-                if (isNeedUnzipJar(jarInput, output)) { // 需要解压 jar
-                    String tmpPath = "${tmpDirPath}${File.separator}${jarInput.name.replace(':', '')}${File.separator}"
-                    JarZipUtils.unzipJar(jarInput.file.absolutePath, tmpPath)
-                    allUnzipJars.put(tmpPath, output.absolutePath)
-                    if (doUnzipJarFile(jarInput, tmpPath, output)) { // 需要压缩
-                        unzipJars.put(tmpPath, output.absolutePath)
-                    }
+//                println("jarInput " + jarInput)
+                waitableExecutor.execute {
+                    File output = handleEachJarInput(outputProvider, jarInput, tmpDirPath)
+                    doEachJarOutput(jarInput, output)
                 }
-                FileUtils.copyFile(jarInput.file, output)
-
-                doEachJarOutput(jarInput, output)
             }
         }
+        waitableExecutor.waitForTasksWithQuickFail(true)
         doAfterJar()
 
         doBeforeDirectory()
         inputs.each { TransformInput input ->
             input.directoryInputs.each { DirectoryInput directoryInput ->
-                println("directoryInput " + directoryInput)
-                File output = outputProvider.getContentLocation(directoryInput.name,
-                        directoryInput.contentTypes, directoryInput.scopes,
-                        Format.DIRECTORY)
-                FileUtils.copyDirectory(directoryInput.file, output)
-                doEachDirectoryOutput(directoryInput, output)
+//                println("directoryInput " + directoryInput)
+                waitableExecutor.execute {
+                    File output = handleEachDirInput(outputProvider, directoryInput)
+                    doEachDirectoryOutput(directoryInput, output)
+                }
             }
         }
+        waitableExecutor.waitForTasksWithQuickFail(true)
         doAfterDirectory()
 
         doAfterTransform()
         zipTmpJar()
     }
 
-    private void zipTmpJar(){
-        unzipJars.each {String tmp, String out ->
-            if(out != ''){
-                JarZipUtils.zipJar(tmp, out)
+    private File handleEachDirInput(TransformOutputProvider outputProvider, DirectoryInput directoryInput) {
+        File output = outputProvider.getContentLocation(directoryInput.name,
+                directoryInput.contentTypes, directoryInput.scopes,
+                Format.DIRECTORY)
+        FileUtils.copyDirectory(directoryInput.file, output)
+        return output
+    }
+
+    private File handleEachJarInput(TransformOutputProvider outputProvider, JarInput jarInput, String tmpDirPath) {
+        File output = outputProvider.getContentLocation(jarInput.name,
+                jarInput.contentTypes, jarInput.scopes, Format.JAR)
+        if (isNeedUnzipJar(jarInput, output)) { // 需要解压 jar
+            String tmpPath = "${tmpDirPath}${File.separator}${jarInput.name.replace(':', '')}${File.separator}"
+            JarZipUtils.unzipJar(jarInput.file.absolutePath, tmpPath)
+            allUnzipJars.put(tmpPath, output.absolutePath)
+            if (doUnzipJarFile(jarInput, tmpPath, output)) { // 需要压缩
+                unzipJars.put(tmpPath, output.absolutePath)
             }
         }
+        FileUtils.copyFile(jarInput.file, output)
+        return output
+    }
+
+    private void zipTmpJar() {
+        WaitableExecutor waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
+        unzipJars.each { String tmp, String out ->
+            if (out != '') {
+                waitableExecutor.execute {
+                    JarZipUtils.zipJar(tmp, out)
+                }
+            }
+
+        }
+        waitableExecutor.waitForTasksWithQuickFail(true)
     }
 
     private void setSupport(IEasyTransformSupport support) {
@@ -177,7 +198,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
      */
     private void doBeforeTransform(@NonNull Context context,
                                    @Nullable TransformOutputProvider outputProvider,
-                                   boolean isIncremental){
+                                   boolean isIncremental) {
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onBeforeTransform(context, outputProvider, isIncremental)
         }
@@ -198,9 +219,9 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
      * @param outputFile
      * @return
      */
-    private boolean isNeedUnzipJar(JarInput jarInput, File outputFile){
-        for(IEasyTransform easyTransform : transformList){
-            if(easyTransform.isNeedUnzipJar(jarInput, outputFile)){
+    private boolean isNeedUnzipJar(JarInput jarInput, File outputFile) {
+        for (IEasyTransform easyTransform : transformList) {
+            if (easyTransform.isNeedUnzipJar(jarInput, outputFile)) {
                 return true
             }
         }
@@ -214,10 +235,10 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
      * @param outputFile
      * @return 是否处理过了解压后的jar 文件
      */
-    private boolean doUnzipJarFile(JarInput jarInput, String unzipPath, File outputFile){
+    private boolean doUnzipJarFile(JarInput jarInput, String unzipPath, File outputFile) {
         boolean result = false
         transformList.each { IEasyTransform easyTransform ->
-            if(easyTransform.onUnzipJarFile(jarInput, unzipPath, outputFile)){
+            if (easyTransform.onUnzipJarFile(jarInput, unzipPath, outputFile)) {
                 result = true
             }
         }
@@ -228,7 +249,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
      * jar文件输出目录，不要在 outputs 的输出目录进行文件操作，如需要解压jar包修改文件，可以参考{@link #doUnzipJarFile}
      * @param outputs 输出目标文件
      */
-    private void doEachJarOutput(JarInput jarInput, File outputs){
+    private void doEachJarOutput(JarInput jarInput, File outputs) {
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onEachJarOutput(jarInput, outputs)
         }
@@ -257,8 +278,8 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
      * 可直接在 output 目录中修改文件
      * @param outputs 输出目标文件
      */
-    private void doEachDirectoryOutput(DirectoryInput directoryInput, File outputs){
-        println("doEachDirectoryOutput " + directoryInput + ' , outputs ' + outputs + ' , transformList ' + transformList)
+    private void doEachDirectoryOutput(DirectoryInput directoryInput, File outputs) {
+//        println("doEachDirectoryOutput " + directoryInput + ' , outputs ' + outputs + ' , transformList ' + transformList)
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onEachDirectoryOutput(directoryInput, outputs)
         }
@@ -277,7 +298,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     /**
      * transform 处理结束，可在此方法中remove classPool 中的 classpath
      */
-    private void doAfterTransform(){
+    private void doAfterTransform() {
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onAfterTransform()
         }
@@ -288,10 +309,10 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
      * @param exception
      * @return 是否拦截处理异常
      */
-    private boolean onException(Exception exception){
+    private boolean onException(Exception exception) {
         boolean interception = true
         transformList.each { IEasyTransform easyTransform ->
-            if(!easyTransform.onException(exception)){
+            if (!easyTransform.onException(exception)) {
                 interception = false
             }
         }
@@ -301,7 +322,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     /**
      * 结束回调此方法，无论正常结束或者发生异常都会调到该方法，释放掉ClassPath
      */
-    private void onFinally(){
+    private void onFinally() {
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onFinally()
         }
