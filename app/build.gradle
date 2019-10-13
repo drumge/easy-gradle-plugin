@@ -62,7 +62,7 @@ easy_plugin {
     plugins{
         kvo { // 使用了 easy-gradle-plugin 的实践项目，详情可跳转 https://github.com/drumge/kvo.git 了解
             plugin = new KvoPlugin(project)
-            transform = new KvoTransform(project)
+//            transform = new KvoTransform(project)
         }
 
         example { // 使用 groovy 语言实现的插件，详细看 plugin-example module

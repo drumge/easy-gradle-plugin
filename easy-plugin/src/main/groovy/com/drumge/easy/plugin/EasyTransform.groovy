@@ -13,6 +13,8 @@ import com.drumge.easy.plugin.utils.JarZipUtils
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Project
 
+import java.util.concurrent.Callable
+
 class EasyTransform extends Transform implements IEasyTransformSupport {
 
     private final Project project
@@ -22,6 +24,8 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     private final Map<String, String> allUnzipJars = new HashMap<>()
     // 暂存解压并被修改的 jar 文件，在最后在压缩
     private final Map<String, String> unzipJars = new HashMap<>()
+    private WaitableExecutor waitableExecutor
+    private List<Exception> exceptionList
 
     EasyTransform(Project project) {
         this.project = project
@@ -78,17 +82,25 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         if (!isEnable) {
             return
         }
+        exceptionList = new ArrayList<>()
+        waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
         try {
             doTransform(transformInvocation)
         } catch (Exception exception) {
             if (!onException(exception)) { // 不处理异常，则终止编译并输出异常堆栈
-//                exception.printStackTrace()
-                throw new RuntimeException("some error happened when building, look up more detail ahead", exception)
+                throwException(exception)
             }
             exception.printStackTrace()
         } finally {
             onFinally()
         }
+    }
+
+    private void throwException(Exception exception) {
+        if (exception instanceof RuntimeException) {
+            throw ((RuntimeException) exception)
+        }
+        throw new RuntimeException("some error happened when building, look up more detail ahead", exception)
     }
 
     @Override
@@ -117,14 +129,24 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         doBeforeJar()
         String tmpDirPath = context.temporaryDir.absolutePath
 //        println("context " + context.variantName + " , " + context.temporaryDir + " , " + context.path)
-        WaitableExecutor waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
+//        WaitableExecutor waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
         inputs.each { TransformInput input ->
             input.jarInputs.each { JarInput jarInput ->
 //                println("jarInput " + jarInput)
-                waitableExecutor.execute {
+                execute {
                     File output = handleEachJarInput(outputProvider, jarInput, tmpDirPath)
                     doEachJarOutput(jarInput, output)
                 }
+//                waitableExecutor.execute(new ExecutorRunnable({
+//                    File output = handleEachJarInput(outputProvider, jarInput, tmpDirPath)
+//                    doEachJarOutput(jarInput, output)
+//                }, { Exception e ->
+//                    happenException(e)
+//                }))
+//                waitableExecutor.execute {
+//                    File output = handleEachJarInput(outputProvider, jarInput, tmpDirPath)
+//                    doEachJarOutput(jarInput, output)
+//                }
             }
         }
         waitableExecutor.waitForTasksWithQuickFail(true)
@@ -134,7 +156,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         inputs.each { TransformInput input ->
             input.directoryInputs.each { DirectoryInput directoryInput ->
 //                println("directoryInput " + directoryInput)
-                waitableExecutor.execute {
+                execute {
                     File output = handleEachDirInput(outputProvider, directoryInput)
                     doEachDirectoryOutput(directoryInput, output)
                 }
@@ -171,16 +193,23 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     }
 
     private void zipTmpJar() {
-        WaitableExecutor waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
+//        WaitableExecutor waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
         unzipJars.each { String tmp, String out ->
             if (out != '') {
-                waitableExecutor.execute {
+                execute {
                     JarZipUtils.zipJar(tmp, out)
                 }
             }
 
         }
         waitableExecutor.waitForTasksWithQuickFail(true)
+    }
+
+    private <V> void execute(Callable<V> callable) {
+        waitableExecutor.execute(new ExecutorRunnable(callable, { Exception e ->
+            happenException(e)
+        }))
+        checkThrowException()
     }
 
     private void setSupport(IEasyTransformSupport support) {
@@ -319,6 +348,25 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         return interception
     }
 
+
+    private void checkThrowException() {
+        Exception e = null
+        exceptionList.each {
+            e.printStackTrace()
+            e = it
+        }
+        if (e != null) {
+            throwException(e)
+        }
+    }
+
+    private void happenException(Exception e) {
+        if (!onException(e)) {
+            exceptionList.add(e)
+            waitableExecutor.cancelAllTasks()
+        }
+    }
+
     /**
      * 结束回调此方法，无论正常结束或者发生异常都会调到该方法，释放掉ClassPath
      */
@@ -326,5 +374,26 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onFinally()
         }
+    }
+}
+
+class ExecutorRunnable<V> implements Callable<V> {
+
+    Callable<V> callable
+    Closure<Exception> exception
+
+    ExecutorRunnable(Callable<V> callable, Closure<Exception> exception) {
+        this.callable = callable
+        this.exception = exception
+    }
+
+    @Override
+    V call() throws Exception {
+        try {
+            return callable.call()
+        } catch(Exception e) {
+            exception.call(e)
+        }
+        return null
     }
 }
