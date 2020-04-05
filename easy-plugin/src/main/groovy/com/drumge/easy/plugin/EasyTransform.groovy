@@ -150,6 +150,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
             }
         }
         waitableExecutor.waitForTasksWithQuickFail(true)
+        checkThrowException()
         doAfterJar()
 
         doBeforeDirectory()
@@ -163,6 +164,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
             }
         }
         waitableExecutor.waitForTasksWithQuickFail(true)
+        checkThrowException()
         doAfterDirectory()
 
         doAfterTransform()
@@ -203,13 +205,14 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
 
         }
         waitableExecutor.waitForTasksWithQuickFail(true)
+        checkThrowException()
     }
 
     private <V> void execute(Callable<V> callable) {
-        waitableExecutor.execute(new ExecutorRunnable(callable, { Exception e ->
+        waitableExecutor.execute(new ExecutorRunnable(callable, { e ->
             happenException(e)
+            checkThrowException()
         }))
-        checkThrowException()
     }
 
     private void setSupport(IEasyTransformSupport support) {
@@ -352,18 +355,18 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     private void checkThrowException() {
         Exception e = null
         exceptionList.each {
-            e.printStackTrace()
             e = it
+            e.printStackTrace()
         }
         if (e != null) {
             throwException(e)
         }
+        waitableExecutor.cancelAllTasks()
     }
 
     private void happenException(Exception e) {
         if (!onException(e)) {
             exceptionList.add(e)
-            waitableExecutor.cancelAllTasks()
         }
     }
 
@@ -380,9 +383,9 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
 class ExecutorRunnable<V> implements Callable<V> {
 
     Callable<V> callable
-    Closure<Exception> exception
+    Closure exception
 
-    ExecutorRunnable(Callable<V> callable, Closure<Exception> exception) {
+    ExecutorRunnable(Callable<V> callable, Closure exception) {
         this.callable = callable
         this.exception = exception
     }
