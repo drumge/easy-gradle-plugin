@@ -4,6 +4,7 @@ import com.android.annotations.NonNull
 import com.android.annotations.Nullable
 import com.android.build.api.transform.*
 import com.android.ide.common.internal.WaitableExecutor
+import com.drumge.easy.cache.JarContentCache
 import com.drumge.easy.plugin.api.IEasyPluginContainer
 import com.drumge.easy.plugin.api.IEasyTransform
 import com.drumge.easy.plugin.api.IEasyTransformSupport
@@ -15,6 +16,10 @@ import org.gradle.api.Project
 
 import java.util.concurrent.Callable
 
+/**
+ * https://www.jianshu.com/p/facbca0576a6
+ * https://blog.csdn.net/weixin_38754349/article/details/97077999
+ */
 class EasyTransform extends Transform implements IEasyTransformSupport {
 
     private final Project project
@@ -26,6 +31,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     private final Map<String, String> unzipJars = new HashMap<>()
     private WaitableExecutor waitableExecutor
     private List<Exception> exceptionList
+    private JarContentCache jarContentCache
 
     EasyTransform(Project project) {
         this.project = project
@@ -114,6 +120,20 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         }
     }
 
+    @Override
+    <V> void execute(Callable<V> callable) {
+        waitableExecutor.execute(new ExecutorRunnable(callable, { e ->
+            happenException(e)
+            checkThrowException()
+        }))
+    }
+
+    @Override
+    void waitForTasks() {
+        waitableExecutor.waitForTasksWithQuickFail(true)
+        checkThrowException()
+    }
+
     private void doTransform(TransformInvocation transformInvocation) {
         Context context = transformInvocation.getContext()
         Collection<TransformInput> inputs = transformInvocation.getInputs()
@@ -121,54 +141,125 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         TransformOutputProvider outputProvider = transformInvocation.getOutputProvider()
         boolean isIncremental = transformInvocation.isIncremental()
 
+        println("isIncremental " + isIncremental)
+
         setSupport(this)
+        jarContentCache = new JarContentCache(context.temporaryDir.absolutePath)
 
         /** 为避免多次遍历，解压，压缩等，如需添加transform处理,请继承 BaseEasyTransform，并重写相关的方法进行 */
         doBeforeTransform(context, outputProvider, isIncremental)
 
         doBeforeJar()
-        String tmpDirPath = context.temporaryDir.absolutePath
-//        println("context " + context.variantName + " , " + context.temporaryDir + " , " + context.path)
-//        WaitableExecutor waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()
-        inputs.each { TransformInput input ->
-            input.jarInputs.each { JarInput jarInput ->
-//                println("jarInput " + jarInput)
-                execute {
-                    File output = handleEachJarInput(outputProvider, jarInput, tmpDirPath)
-                    doEachJarOutput(jarInput, output)
-                }
-//                waitableExecutor.execute(new ExecutorRunnable({
-//                    File output = handleEachJarInput(outputProvider, jarInput, tmpDirPath)
-//                    doEachJarOutput(jarInput, output)
-//                }, { Exception e ->
-//                    happenException(e)
-//                }))
-//                waitableExecutor.execute {
-//                    File output = handleEachJarInput(outputProvider, jarInput, tmpDirPath)
-//                    doEachJarOutput(jarInput, output)
-//                }
-            }
-        }
-        waitableExecutor.waitForTasksWithQuickFail(true)
-        checkThrowException()
+        transformJar(context, inputs, outputProvider, isIncremental)
         doAfterJar()
 
         doBeforeDirectory()
-        inputs.each { TransformInput input ->
-            input.directoryInputs.each { DirectoryInput directoryInput ->
-//                println("directoryInput " + directoryInput)
-                execute {
-                    File output = handleEachDirInput(outputProvider, directoryInput)
-                    doEachDirectoryOutput(directoryInput, output)
-                }
-            }
-        }
-        waitableExecutor.waitForTasksWithQuickFail(true)
-        checkThrowException()
+        transformSrc(inputs, outputProvider, isIncremental)
         doAfterDirectory()
 
         doAfterTransform()
         zipTmpJar()
+    }
+
+    private void transformJar(Context context, Collection<TransformInput> inputs,
+                              TransformOutputProvider outputProvider, boolean isIncremental) {
+        String tmpDirPath = context.temporaryDir.absolutePath
+        boolean isJarIncremental = isIncremental && jarContentCache.exits()
+        println("transformJar isJarIncremental " + isJarIncremental)
+        if (!isJarIncremental) {
+            outputProvider.deleteAll()
+            jarContentCache.deleteAll()
+        }
+
+        inputs.each { TransformInput input ->
+            input.jarInputs.each { JarInput jarInput ->
+//                println("jarInput " + jarInput)
+                execute {
+                    File output = outputProvider.getContentLocation(jarInput.name,
+                            jarInput.contentTypes, jarInput.scopes, Format.JAR)
+                    if (isJarIncremental) {
+                        handleIncrementJar(jarInput, output, tmpDirPath)
+                    } else {
+                        handleNoIncrementJar(output, jarInput, tmpDirPath)
+                    }
+
+                    if (jarInput.status != Status.REMOVED) {
+                        jarContentCache.addJar(jarInput, output.absolutePath)
+                    }
+                }
+            }
+        }
+        waitForTasks()
+    }
+
+    private void handleIncrementJar(JarInput jarInput, File output,
+                                    String tmpDirPath) {
+        if (jarInput.status == Status.ADDED
+                || jarInput.status == Status.CHANGED) {
+            handleNoIncrementJar(output, jarInput, tmpDirPath)
+        } else if (jarInput.status == Status.NOTCHANGED) {
+            //记录当前哪些jar参与了编译
+//            File output = outputProvider.getContentLocation(jarInput.name,
+//                    jarInput.contentTypes, jarInput.scopes, Format.JAR)
+            doNoChangeJar(jarInput, output)
+        } else if (jarInput.status == Status.REMOVED) {
+            //Status.REMOVED,其实一般删除一个jar，实测并不会传入进来,所以什么都不干
+        }
+    }
+
+    private void handleNoIncrementJar(File output, JarInput jarInput,
+                                      String tmpDirPath) {
+        handleEachJarInput(output, jarInput, tmpDirPath)
+        doEachJarOutput(jarInput, output)
+    }
+
+    private void transformSrc(Collection<TransformInput> inputs, TransformOutputProvider
+            outputProvider, boolean isIncremental) {
+        boolean isDirIncremental = isIncremental && jarContentCache.exits()
+//        println("transformSrc isDirIncremental " + isDirIncremental)
+        inputs.each { TransformInput input ->
+            input.directoryInputs.each { DirectoryInput directoryInput ->
+                println("${System.currentTimeMillis()} directoryInput " + directoryInput)
+                execute {
+                    File outputDirFile = outputProvider.getContentLocation(directoryInput.name,
+                            directoryInput.contentTypes, directoryInput.scopes,
+                            Format.DIRECTORY)
+                    println("${System.currentTimeMillis()} outputDirFile " + outputDirFile)
+                    doEachDirectoryOutput(directoryInput, outputDirFile)
+                    def inputFilePath = directoryInput.file.absolutePath
+                    if (isDirIncremental) {
+                        handleIncrementChangeFile(directoryInput, inputFilePath, outputDirFile)
+                    } else {
+                        File output = handleEachDirInput(outputProvider, directoryInput)
+                        project.fileTree(output).findAll { !it.directory }.each {
+                            doEachChangeFile(directoryInput, outputDirFile, it)
+                        }
+                    }
+                }
+            }
+        }
+        waitForTasks()
+    }
+
+    private List handleIncrementChangeFile(DirectoryInput directoryInput,
+                                           inputFilePath, File outputDirFile) {
+        def outputDir = outputDirFile.absolutePath
+        for (def entry : directoryInput.changedFiles.entrySet()) {
+            File file = entry.key
+            Status status = entry.value
+            def outputFullPath = file.absolutePath.replace(inputFilePath, outputDir)
+            def outputFile = new File(outputFullPath)
+            if (!outputFile.parentFile.exists()) {
+                outputFile.parentFile.mkdirs()
+            }
+            if ((status == Status.CHANGED || status == Status.ADDED)
+                    && !file.isDirectory()) {
+                FileUtils.copyFile(file, outputFile)
+                doEachChangeFile(directoryInput, outputDirFile, outputFile)
+            } else if (status == Status.REMOVED) {
+                outputFile.delete()
+            }
+        }
     }
 
     private File handleEachDirInput(TransformOutputProvider outputProvider, DirectoryInput directoryInput) {
@@ -179,9 +270,7 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         return output
     }
 
-    private File handleEachJarInput(TransformOutputProvider outputProvider, JarInput jarInput, String tmpDirPath) {
-        File output = outputProvider.getContentLocation(jarInput.name,
-                jarInput.contentTypes, jarInput.scopes, Format.JAR)
+    private void handleEachJarInput(File output, JarInput jarInput, String tmpDirPath) {
         if (isNeedUnzipJar(jarInput, output)) { // 需要解压 jar
             String tmpPath = "${tmpDirPath}${File.separator}${jarInput.name.replace(':', '')}${File.separator}"
             JarZipUtils.unzipJar(jarInput.file.absolutePath, tmpPath)
@@ -191,7 +280,6 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
             }
         }
         FileUtils.copyFile(jarInput.file, output)
-        return output
     }
 
     private void zipTmpJar() {
@@ -204,15 +292,10 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
             }
 
         }
-        waitableExecutor.waitForTasksWithQuickFail(true)
-        checkThrowException()
-    }
-
-    private <V> void execute(Callable<V> callable) {
-        waitableExecutor.execute(new ExecutorRunnable(callable, { e ->
-            happenException(e)
-            checkThrowException()
-        }))
+        execute {
+            jarContentCache.checkAndSave()
+        }
+        waitForTasks()
     }
 
     private void setSupport(IEasyTransformSupport support) {
@@ -242,6 +325,17 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
     private void doBeforeJar() {
         transformList.each { IEasyTransform easyTransform ->
             easyTransform.onBeforeJar()
+        }
+    }
+
+
+    /**
+     * 增量有缓存，无需处理
+     * @param outputs 输出目标文件
+     */
+    private void doNoChangeJar(JarInput jarInput, File outputs) {
+        transformList.each { IEasyTransform easyTransform ->
+            easyTransform.onNoChangeJar(jarInput, outputs)
         }
     }
 
@@ -305,18 +399,18 @@ class EasyTransform extends Transform implements IEasyTransformSupport {
         }
     }
 
-    /**
-     * 处理代码目录，一般指工程中的Java代码文件
-     * 可直接在 output 目录中修改文件
-     * @param outputs 输出目标文件
-     */
-    private void doEachDirectoryOutput(DirectoryInput directoryInput, File outputs) {
-//        println("doEachDirectoryOutput " + directoryInput + ' , outputs ' + outputs + ' , transformList ' + transformList)
+    private void doEachDirectoryOutput(DirectoryInput directoryInput, File outputDirFile) {
         transformList.each { IEasyTransform easyTransform ->
-            easyTransform.onEachDirectoryOutput(directoryInput, outputs)
+            easyTransform.onEachDirectoryOutput(directoryInput, outputDirFile)
         }
     }
 
+    private void doEachChangeFile(DirectoryInput directoryInput, File outputDirFile,
+                                      File outputFile) {
+        transformList.each { IEasyTransform easyTransform ->
+            easyTransform.onChangeFile(directoryInput, outputDirFile, outputFile)
+        }
+    }
 
     /**
      * 处理Directory包之后回调

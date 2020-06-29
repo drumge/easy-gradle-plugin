@@ -47,6 +47,11 @@ class BaseEasyTransform implements IEasyTransform {
 
     }
 
+    @Override
+    void onNoChangeJar(JarInput jarInput, File outputFile) {
+
+    }
+
     /**
      * 判断是否需要加压 jar
      * @param jarInput
@@ -95,12 +100,21 @@ class BaseEasyTransform implements IEasyTransform {
     }
 
     /**
-     * 处理代码目录，一般指工程中的Java代码文件
+     * 不要在这里直接做文件修改操作，可以在{@link #onChangeFile}中操作
      * @param directoryInput
-     * @return 是否继续遍历，true--继续，false--跳出循环
+     * @param outputDirFile 输出目录
      */
-    @Override
-    void onEachDirectoryOutput(DirectoryInput directoryInput, File outputs){
+    void onEachDirectoryOutput(DirectoryInput directoryInput, File outputDirFile) {
+
+    }
+
+    /**
+     * 改变的文件，需要处理
+     * @param directoryInput
+     * @param outputDirFile
+     * @param file
+     */
+    void onChangeFile(DirectoryInput directoryInput, File outputDirFile, File file) {
 
     }
 

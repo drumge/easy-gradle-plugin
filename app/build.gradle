@@ -18,7 +18,8 @@ android {
             testCoverageEnabled = true
         }
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -35,7 +36,8 @@ dependencies {
     annotationProcessor "com.github.drumge:kvo-compiler:${kvo_compiler_version}"
     compileOnly project(path: ':plugin-example')
 
-    implementation 'com.github.bumptech.glide:glide:3.8.0'
+    implementation 'com.github.bumptech.glide:glide:4.8.0'
+    implementation 'com.facebook.android:facebook-core:5.15.3'
 }
 
 ///*
@@ -113,9 +115,14 @@ task t {
     }
 }
 
-gradle.taskGraph.afterTask {
-    println(it)
-}
+//gradle.taskGraph.afterTask {
+//    println('start  -------------------------------')
+//    println('inputs >> ' + it.inputs.files.files)
+//    println()
+//    println('outputs >> ' + it.outputs.files.files)
+////    println(it.properties)
+//    println('end  -------------------------------')
+//}
 
 
 

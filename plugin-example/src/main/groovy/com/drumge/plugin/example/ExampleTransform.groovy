@@ -1,9 +1,13 @@
 package com.drumge.plugin.example
 
+import com.android.build.api.transform.DirectoryInput
 import com.android.build.api.transform.JarInput
 import com.drumge.easy.plugin.api.BaseEasyTransform
 import javassist.CtClass
+import javassist.CtConstructor
+import javassist.CtField
 import javassist.CtMethod
+import javassist.Modifier
 import org.gradle.api.Project
 
 class ExampleTransform extends BaseEasyTransform {
@@ -11,7 +15,9 @@ class ExampleTransform extends BaseEasyTransform {
     private static final String TAG = "ExampleTransform"
 
     private static final String GLIDE_ARTIFACT = 'com.github.bumptech.glide:glide'
+    private static final String FACEBOOK_CORE_ARTIFACT = 'com.facebook.android:facebook-core:'
 
+    private String fbUnzip = ""
 
     ExampleTransform(Project project) {
         super(project)
@@ -44,7 +50,10 @@ class ExampleTransform extends BaseEasyTransform {
     @Override
     boolean isNeedUnzipJar(JarInput jarInput, File outputFile) {
         String artifact = jarInput.name
+        log(TAG, " isNeedUnzipJar lalalalala  artifact " + artifact)
         if (artifact.startsWith(GLIDE_ARTIFACT)) {
+            return true
+        } else if (artifact.startsWith(FACEBOOK_CORE_ARTIFACT)) {
             log(TAG, " isNeedUnzipJar lalalalala  artifact " + artifact)
             return true
         }
@@ -56,14 +65,146 @@ class ExampleTransform extends BaseEasyTransform {
         appendClassPath(unzipPath)
         String artifact = jarInput.name
         if (artifact.startsWith(GLIDE_ARTIFACT)) {
-            handleGlide(unzipPath)
+//            handleGlide(unzipPath)
+            return true
+        } else if (artifact.startsWith(FACEBOOK_CORE_ARTIFACT)) {
+            fbUnzip = unzipPath
             return true
         }
         return false
     }
 
+    @Override
+    void onAfterDirectory() {
+        super.onAfterDirectory()
+//        handler(fbUnzip)
+    }
+
     private static log(String tag, String format, Object... argvs) {
         println("[${tag}]\t${String.format(format, argvs)}")
+    }
+
+
+    private void handler(String unzipPath) {
+        def newMethod = '''{
+        if ($1 == null || $1.isEmpty()) {
+            return;
+        }
+
+        // Kill events if kill-switch is enabled
+        if (com.facebook.internal.FetchedAppGateKeepersManager.getGateKeeperForKey(
+                APP_EVENTS_KILLSWITCH,
+                com.facebook.FacebookSdk.getApplicationId(),
+                false)) {
+            com.facebook.internal.Logger.log(com.facebook.LoggingBehavior.APP_EVENTS, "AppEvents",
+                    "KillSwitch is enabled and fail to log app event: " + $1);
+            return;
+        }
+        
+        Runnable runnable = new com.facebook.appevents.AppEventRunnable(
+                                    this, 
+                                    this.contextName,
+                                    $1,
+                                    $2,
+                                    $3,
+                                    $4,
+                                    com.facebook.appevents.internal.ActivityLifecycleTracker.isInBackground(),
+                                    $5,
+                                    this.accessTokenAppId);
+                                    
+        if (com.drumge.easy.plugin.UserInfo.isEventInject) {
+            $0.backgroundExecutor.execute(runnable);
+        } else {
+            runnable.run();
+        }
+        }'''
+
+        CtClass cls1 = pool.get('com.facebook.internal.Logger')
+        log("FbAnrHandler", "cls1 %s", cls1)
+        CtClass cls = pool.get('com.facebook.appevents.AppEventsLoggerImpl')
+        if (cls.isFrozen()) {
+            cls.defrost()
+        }
+        log("FbAnrHandler", "cls %s", cls)
+
+        CtMethod method
+        cls.getDeclaredMethods('logEvent').each {
+            it.setModifiers(Modifier.PROTECTED)
+            if (it.parameterTypes.size() == 5) {
+                method = it
+            }
+        }
+        createEventRunnable(unzipPath)
+
+        method.setBody(newMethod)
+        cls.writeFile(unzipPath)
+        log("FbAnrHandler", " finish cls %s", cls)
+    }
+
+    private void createEventRunnable(String unzipPath) {
+        CtClass newClass = pool.makeClass("com.facebook.appevents.AppEventRunnable")
+        //设置父类
+        newClass.setSuperclass(pool.get("java.lang.Runnable"))
+        def imp = pool.get("com.facebook.appevents.AppEventsLoggerImpl")
+        def uuid = pool.get("java.util.UUID")
+        def pair = pool.get("com.facebook.appevents.AccessTokenAppIdPair")
+        def bundle = pool.get("android.os.Bundle")
+        def string = pool.get("java.lang.String")
+        def dt = pool.get("java.lang.Double")
+        def bt = CtClass.booleanType
+        newClass.addField(new CtField(imp, "imp", newClass))
+        newClass.addField(new CtField(string, "contextName", newClass))
+        newClass.addField(new CtField(string, "eventName", newClass))
+        newClass.addField(new CtField(dt, "valueToSum", newClass))
+        newClass.addField(new CtField(bundle, "parameters", newClass))
+        newClass.addField(new CtField(bt, "isImplicitlyLogged", newClass))
+        newClass.addField(new CtField(bt, "isInBackground", newClass))
+        newClass.addField(new CtField(uuid, "currentSessionId", newClass))
+        newClass.addField(new CtField(pair, "accessTokenAppId", newClass))
+
+        CtConstructor constructor = new CtConstructor([imp, string, string, dt, bundle,
+                                                       bt, bt, uuid, pair
+        ] as CtClass[], newClass)
+        constructor.setBody('''{
+            this.imp = imp;
+            this.contextName = contextName;
+            this.eventName = eventName;
+            this.valueToSum = valueToSum;
+            this.parameters = parameters;
+            this.isImplicitlyLogged = isImplicitlyLogged;
+            this.isInBackground = isInBackground;
+            this.currentSessionId = currentSessionId;
+            this.accessTokenAppId  = accessTokenAppId;
+            }''')
+        newClass.addConstructor(constructor)
+        CtMethod run = CtMethod.make('''
+        public void run() {
+            try {
+                com.facebook.appevents.AppEvent event =
+                        new com.facebook.appevents.AppEvent(
+                                this.contextName,
+                                this.eventName,
+                                this.valueToSum,
+                                this.parameters,
+                                this.isImplicitlyLogged,
+                                this.isInBackground,
+                                this.currentSessionId);
+                imp.logEvent(event, this.accessTokenAppId);
+            } catch (org.json.JSONException jsonException) {
+                // If any of the above failed, just consider this an illegal event.
+                com.facebook.internal.Logger.log(com.facebook.LoggingBehavior.APP_EVENTS,
+                        "AppEvents",
+                        "JSON encoding for app event failed: " + jsonException.toString());
+
+            } catch (com.facebook.FacebookException e) {
+                // If any of the above failed, just consider this an illegal event.
+                com.facebook.internal.Logger.log(com.facebook.LoggingBehavior.APP_EVENTS,
+                        "AppEvents", "Invalid app event: " + e.toString());
+            }
+        }
+        ''', newClass)
+        newClass.addMethod(run)
+        newClass.writeFile(unzipPath)
     }
 
     private void handleGlide(String unzipPath) {
@@ -79,6 +220,10 @@ class ExampleTransform extends BaseEasyTransform {
         String body ='''return $0._decode($0.fileOpener, $0.streamDecoder, $1, $2, $3);'''
         decode.setBody(body)
         cls.writeFile(unzipPath)
+
+        println("hhhhhffffdddddddd")
+        CtClass test = pool.get("com.bumptech.glide.load.resource.file.Test")
+        println(test)
     }
 
     private CtMethod createDecodeMethod(CtClass cls) {

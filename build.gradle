@@ -9,7 +9,7 @@ buildscript {
         jcenter()
 //        maven{ url uri('https://oss.sonatype.org/content/repositories/snapshots/')} // 不一定会拉取最新的SNAPSHOT版本
 //        maven{ url uri('https://oss.sonatype.org/content/groups/public')} // 不一定会拉取最新的SNAPSHOT版本
-        maven{ url uri('https://oss.sonatype.org/content/groups/staging')} // 每次会拉取最新的SNAPSHOT版本
+        maven{ url uri('https://oss.sonatype.org/content/groups/staging/')} // 每次会拉取最新的SNAPSHOT版本
     }
     dependencies {
         classpath "com.android.tools.build:gradle:${gradle_version}"
@@ -38,7 +38,7 @@ allprojects {
         jcenter()
 //        maven{ url uri('https://oss.sonatype.org/content/repositories/snapshots/')} // 不一定会拉取最新的SNAPSHOT版本
 //        maven{ url uri('https://oss.sonatype.org/content/groups/public')} // 不一定会拉取最新的SNAPSHOT版本
-        maven{ url uri('https://oss.sonatype.org/content/groups/staging')} // 每次会拉取最新的SNAPSHOT版本
+        maven{ url uri('https://oss.sonatype.org/content/groups/staging/')} // 每次会拉取最新的SNAPSHOT版本
     }
 }
 

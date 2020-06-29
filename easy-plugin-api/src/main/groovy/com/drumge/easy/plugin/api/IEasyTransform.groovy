@@ -35,6 +35,13 @@ interface IEasyTransform {
     void onBeforeJar()
 
     /**
+     * 增量编译下，jar 输出不变，无需处理
+     * @param jarInput
+     * @param outputFile
+     */
+    void onNoChangeJar(JarInput jarInput, File outputFile)
+
+    /**
      * 判断是否需要解压 jar
      * @param jarInput
      * @param outputFile
@@ -45,15 +52,15 @@ interface IEasyTransform {
     /**
      * 解压之后的jar目录，如果都没有操作（修改）过jar文件，则在执行结束之后不会进行压缩
      * @param jarInput
-     * @param unzipPath
+     * @param unzipPath 操作修改 class 文件的目录
      * @param outputFile
-     * @return 是否处理过了解压后的jar 文件
+     * @return true -- 保存修改
      */
     boolean onUnzipJarFile(JarInput jarInput, String unzipPath, File outputFile)
 
     /**
      * jar文件输出目录，不要在 outputs 的输出目录进行文件操作
-     * 如需要解压jar包并修改文件，可以在{@link #doUnzipJarFile}中操作
+     * 如需要解压jar包并修改文件，可以在{@link #onUnzipJarFile}中操作
      * @param jarInput jar 文件输入流
      * @param outputs 输入的jar转到输出的文件
      */
@@ -70,11 +77,24 @@ interface IEasyTransform {
     void onBeforeDirectory()
 
     /**
-     * 处理代码目录，一般指工程中的Java代码文件
+     * 不要在这里直接做文件修改操作，可以在{@link #onChangeFile}中操作
      * @param directoryInput
-     * @return 是否继续遍历，true--继续，false--跳出循环
+     * @param outputDirFile 输出目录
      */
-    void onEachDirectoryOutput(DirectoryInput directoryInput, File outputs)
+    void onEachDirectoryOutput(DirectoryInput directoryInput, File outputDirFile)
+
+    /**
+     * 改变的文件，需要处理
+     * @param directoryInput
+     * @param file
+     */
+    /**
+     * 改变的文件，需要处理
+     * @param directoryInput
+     * @param outputDirFile 输出的文件目录，不包含包名的目录
+     * @param file 文件，包含包名
+     */
+    void onChangeFile(DirectoryInput directoryInput, File outputDirFile, File file)
 
     /**
      * 处理Directory包之后回调

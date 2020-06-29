@@ -19,3 +19,23 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-ignorewarnings
+-dontwarn
+-optimizationpasses 5
+ -dontusemixedcaseclassnames
+ -dontskipnonpubliclibraryclasses
+ -dontskipnonpubliclibraryclassmembers
+ -dontpreverify
+ -verbose
+ -optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
+ -dontwarn All
+ -dontwarn android.support.v4.**
+ -dontwarn javax.microedition.khronos.**
+ #-keepattributes InnerClasses
+ -keepattributes JavascriptInterface
+ -keepattributes Signature
+ -keepattributes *Annotation*
+ -ignorewarnings
+
+ -dontoptimize
